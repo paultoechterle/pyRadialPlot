@@ -194,8 +194,8 @@ class Radialplot(Axes):
         ends = list(zip(x2, y2))
         segments = zip(starts, ends)
 
-        self.lc = mc.LineCollection(segments, colors='k', linewidths=1)
-        self.add_collection(self.lc)
+        lc = mc.LineCollection(segments, colors='k', linewidths=1)
+        self.add_collection(lc)
         
     def _get_radial_ticks_z(self):
         # Let's build the ticks of the Age axis
