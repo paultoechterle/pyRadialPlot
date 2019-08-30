@@ -24,6 +24,83 @@ class Radialplot(Axes):
     ZETA = 350
     RHOD = 1.304
 
+    class ZAxis(object):
+
+        def __init__(self, ax):
+            self.ax = ax
+   
+        def _add_radial_axis(self):
+            # Get min and max angle
+            zr = self._get_radial_ticks_z()
+
+            theta1 = np.arctan(np.min(zr))
+            theta1 = np.rad2deg(theta1)
+            theta2 = np.arctan(np.max(zr))
+            theta2 = np.rad2deg(theta2)
+
+            width = 2.0 * (1.2 * self.ax.max_x)
+            height = width
+
+            # The circle is always centered around 0.
+            # Width and height are equals (circle)
+            arc_element = Arc(
+                (0, 0), width, height, theta1=theta1,
+                theta2=theta2, linewidth=1, zorder=0, color="k")
+
+            self.ax.add_patch(arc_element)
+            
+            # Add ticks
+            self.ticks()
+            self.labels()
+    
+        def _get_radial_ticks_z(self):
+            # Let's build the ticks of the Age axis
+            za = self.ticks_locator()
+            zr = self.ax._t2z(np.array(za) * 1e6) - self.ax.z0
+            return zr
+    
+        def ticks(self, nticks=10):
+
+            zr = self._get_radial_ticks_z()
+
+            # Lets build a line collection
+            R1 = 1.2 * self.ax.max_x
+            R2 = 1.01 * R1
+            zr = np.arctan(zr)
+            x1 = R1 * np.cos(zr)
+            y1 = R1 * np.sin(zr)
+            x2 = R2 * np.cos(zr)
+            y2 = R2 * np.sin(zr)
+            
+            starts = list(zip(x1, y1))
+            ends = list(zip(x2, y2))
+            segments = zip(starts, ends)
+
+            lc = mc.LineCollection(segments, colors='k', linewidths=1)
+            self.ax.add_collection(lc)
+    
+        def ticks_locator(self, ticks=None):
+            if not ticks:
+                ages = self.ax._z2t(self.ax.z)
+                start, end = np.int(np.rint(min(ages))), np.int(np.rint(max(ages)))
+                loc = MaxNLocator()
+                ticks = loc.tick_values(start, end)
+            return ticks
+    
+        def labels(self):
+            # text label
+            R3 = 1.2 * self.ax.max_x
+            R3 += 0.02 * 1.2 * self.ax.max_x
+            za = self.ticks_locator()
+            labels = self.ax._t2z(np.array(za) * 1e6)
+            labels -= self.ax.z0
+            x1 = R3 * np.cos(np.arctan(labels))
+            y1 = R3 * np.sin(np.arctan(labels))
+
+            for idx, val in enumerate(za):
+                self.ax.text(x1[idx], y1[idx], str(val)+ "Ma") 
+
+
     def radialplot(self, Ns, Ni, zeta, rhod, 
                    Dpars=None, marker="o", 
                    transform="Logarithmic"):
@@ -56,7 +133,8 @@ class Radialplot(Axes):
         if Dpars:
             self.figure.colorbar(im, ax=self, orientation="horizontal")
         
-        self._add_radial_axis()
+        self.zaxis = Radialplot.ZAxis(self)
+        self.zaxis._add_radial_axis()
         self._add_values_indicators()
 
     def set_xticks(self, ticks=None):
@@ -67,17 +145,15 @@ class Radialplot(Axes):
             ticks = loc.tick_values(0., self.max_x)
             super(Radialplot, self).set_xticks(ticks)
         self.spines["bottom"].set_bounds(ticks[0], ticks[-1])
-
-    def set_xlim(self, xlim=None):
-        if xlim:
-            super(Radialplot, self).set_xlim(xlim[0], 1.25 * xlim[-1])
-        else:   
-            super(Radialplot, self).set_xlim(0, 1.25 * self.max_x)
-
+    
     @property
-    def max_x(self):
-        return np.max(self.x)
-        
+    def x(self):
+        return  1.0 / self.sez
+    
+    @property
+    def y(self):
+        return (self.z - self.z0) / self.sez
+    
     @property
     def z(self):
         """ Return transformed z-values"""
@@ -89,6 +165,16 @@ class Radialplot(Axes):
            
         if self.transform == "arcsine":
             return np.arcsin(np.sqrt((self.Ns + 3.0/8.0) / (self.Ns + self.Ni + 3.0 / 4.0)))
+
+    def set_xlim(self, xlim=None):
+        if xlim:
+            super(Radialplot, self).set_xlim(xlim[0], 1.25 * xlim[-1])
+        else:   
+            super(Radialplot, self).set_xlim(0, 1.25 * self.max_x)
+
+    @property
+    def max_x(self):
+        return np.max(self.x)
         
     @property
     def sez(self):
@@ -118,14 +204,6 @@ class Radialplot(Axes):
         if self.transform == "arcsine":
             return np.arcsin(np.sqrt(np.sum(self.Ns) / np.sum(self.Ns + self.Ni)))
     
-    @property
-    def x(self):
-        return  1.0 / self.sez
-    
-    @property
-    def y(self):
-        return (self.z - self.z0) / self.sez
-    
     def _z2t(self, z):
         
         if self.transform == "Linear":
@@ -152,65 +230,6 @@ class Radialplot(Axes):
                         )
                     )
     
-    def _add_radial_axis(self):
-        # Get min and max angle
-        zr = self._get_radial_ticks_z()
-
-        theta1 = np.arctan(np.min(zr))
-        theta1 = np.rad2deg(theta1)
-        theta2 = np.arctan(np.max(zr))
-        theta2 = np.rad2deg(theta2)
-
-        print(theta1, theta2)
-        width = 2.0 * (1.2 * self.max_x)
-        height = width
-
-        # The circle is always centered around 0.
-        # Width and height are equals (circle)
-        arc_element = Arc(
-            (0, 0), width, height, theta1=theta1,
-            theta2=theta2, linewidth=1, zorder=0, color="k")
-
-        self.add_patch(arc_element)
-        
-        # Add ticks
-        self._add_radial_ticks()
-        self._add_radial_ticks_labels()
-        
-    def _add_radial_ticks(self, nticks=10):
-
-        zr = self._get_radial_ticks_z()
-
-        # Lets build a line collection
-        R1 = 1.2 * self.max_x
-        R2 = 1.01 * R1
-        zr = np.arctan(zr)
-        x1 = R1 * np.cos(zr)
-        y1 = R1 * np.sin(zr)
-        x2 = R2 * np.cos(zr)
-        y2 = R2 * np.sin(zr)
-        
-        starts = list(zip(x1, y1))
-        ends = list(zip(x2, y2))
-        segments = zip(starts, ends)
-
-        lc = mc.LineCollection(segments, colors='k', linewidths=1)
-        self.add_collection(lc)
-        
-    def _get_radial_ticks_z(self):
-        # Let's build the ticks of the Age axis
-        za = self.set_radial_ticks_ages()
-        zr = self._t2z(np.array(za) * 1e6) - self.z0
-        return zr
-    
-    def set_radial_ticks_ages(self, ticks=None):
-        if not ticks:
-            ages = self._z2t(self.z)
-            start, end = np.int(np.rint(min(ages))), np.int(np.rint(max(ages)))
-            loc = MaxNLocator()
-            ticks = loc.tick_values(start, end)
-        return ticks
-        
     def _add_values_indicators(self):
         R1 = (1.2 - 0.02) * self.max_x
         R2 = (1.2 - 0.01) * self.max_x
@@ -227,18 +246,6 @@ class Radialplot(Axes):
         lc = mc.LineCollection(segments, colors='k', linewidths=2)
         self.add_collection(lc) 
         
-    def _add_radial_ticks_labels(self):
-        # text label
-        R3 = 1.2 * self.max_x
-        R3 += 0.02 * 1.2 * self.max_x
-        za = self.set_radial_ticks_ages()
-        labels = self._t2z(np.array(za) * 1e6)
-        labels -= self.z0
-        x1 = R3 * np.cos(np.arctan(labels))
-        y1 = R3 * np.sin(np.arctan(labels))
-
-        for idx, val in enumerate(za):
-            self.text(x1[idx], y1[idx], str(val)+ "Ma") 
             
 register_projection(Radialplot)
 
