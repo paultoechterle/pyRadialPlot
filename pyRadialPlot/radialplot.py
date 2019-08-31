@@ -100,7 +100,6 @@ class Radialplot(Axes):
             for idx, val in enumerate(za):
                 self.ax.text(x1[idx], y1[idx], str(val)+ "Ma") 
 
-
     def radialplot(self, Ns, Ni, zeta, rhod, 
                    Dpars=None, marker="o", 
                    transform="Logarithmic"):
@@ -229,6 +228,17 @@ class Radialplot(Axes):
                         1.0 + LAMBDA * self.zeta * G * self.rhod / (np.exp(LAMBDA * t) - 1.0)
                         )
                     )
+
+    def _xy2zs(self, x, y):
+        return 1.0 / x, self.z0 + self.z * y
+
+    def _rz2xy(self, r, z):
+        # Calculate the coordinates of a point given by a radial distance
+        # and a z-value (i.e. a slope)
+        slope = z - self.z0
+        x = 1 / np.sqrt(1 / r**2 + slope**2 / r**2)
+        y = slope * x
+        return x, y
     
     def _add_values_indicators(self):
         R1 = (1.2 - 0.02) * self.max_x
