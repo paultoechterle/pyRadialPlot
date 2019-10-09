@@ -21,6 +21,14 @@ def read_radialplotter_file(filename):
         for line in file:
             Ns.append(int(line[0]))
             Ni.append(int(line[1]))
-            dpars.append(float(line[2]))
+            try:
+                dpars.append(float(line[2]))
+            except:
+                pass
 
-    return Ns, Ni, dpars
+    return {"Ns": Ns,
+            "Ni": Ni,
+            "zeta": zeta,
+            "zeta_err": zeta_err,
+            "rhod": rhod,
+            "rhod_err": rhod_err}

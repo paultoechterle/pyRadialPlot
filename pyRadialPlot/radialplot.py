@@ -28,57 +28,51 @@ class Radialplot(Axes):
 
         def __init__(self, ax):
             self.ax = ax
-   
+            self.radius = 0.9
+        
+        @property
+        def zlim(self):
+            ticks = self.ticks_locator()
+            return (min(ticks), max(ticks))
+
         def _add_radial_axis(self):
             # Get min and max angle
-            zr = self._get_radial_ticks_z()
 
-            theta1 = np.arctan(np.min(zr))
-            theta1 = np.rad2deg(theta1)
-            theta2 = np.arctan(np.max(zr))
-            theta2 = np.rad2deg(theta2)
-
-            width = 2.0 * (1.2 * self.ax.max_x)
-            height = width
+            theta1 = self._t2axis_angle(self.zlim[0] * 1e6)
+            theta2 = self._t2axis_angle(self.zlim[1] * 1e6)
 
             # The circle is always centered around 0.
             # Width and height are equals (circle)
+            # Here the easiest is probably to use axis coordinates. The Arc
+            # is always centered at (0.,0.) and 
+
+            height = width = 2.0 * self.radius
             arc_element = Arc(
-                (0, 0), width, height, theta1=theta1,
-                theta2=theta2, linewidth=1, zorder=0, color="k")
+                (0, 0.5), width, height, angle=0., theta1=theta1,
+                theta2=theta2, linewidth=1, zorder=0, color="k",
+                transform=self.ax.transAxes)
 
             self.ax.add_patch(arc_element)
             
             # Add ticks
             self.ticks()
             self.labels()
-    
+            self.add_values_indicators()
+       
+        def _t2axis_angle(self, t):
+            axis_to_data = self.ax.transAxes + self.ax.transData.inverted()
+            data_to_axis = axis_to_data.inverted()
+            x, y = self.ax._rz2xy(1.0, self.ax._t2z(t))
+            x, y = data_to_axis.transform((x, y))
+            y -= 0.5
+            return np.rad2deg(np.arctan(y / x))
+
         def _get_radial_ticks_z(self):
             # Let's build the ticks of the Age axis
             za = self.ticks_locator()
             zr = self.ax._t2z(np.array(za) * 1e6) - self.ax.z0
-            return zr
-    
-        def ticks(self, nticks=10):
-
-            zr = self._get_radial_ticks_z()
-
-            # Lets build a line collection
-            R1 = 1.2 * self.ax.max_x
-            R2 = 1.01 * R1
-            zr = np.arctan(zr)
-            x1 = R1 * np.cos(zr)
-            y1 = R1 * np.sin(zr)
-            x2 = R2 * np.cos(zr)
-            y2 = R2 * np.sin(zr)
-            
-            starts = list(zip(x1, y1))
-            ends = list(zip(x2, y2))
-            segments = zip(starts, ends)
-
-            lc = mc.LineCollection(segments, colors='k', linewidths=1)
-            self.ax.add_collection(lc)
-    
+            return za
+   
         def ticks_locator(self, ticks=None):
             if not ticks:
                 ages = self.ax._z2t(self.ax.z)
@@ -89,20 +83,54 @@ class Radialplot(Axes):
     
         def labels(self):
             # text label
-            R3 = 1.2 * self.ax.max_x
-            R3 += 0.02 * 1.2 * self.ax.max_x
-            za = self.ticks_locator()
-            labels = self.ax._t2z(np.array(za) * 1e6)
-            labels -= self.ax.z0
-            x1 = R3 * np.cos(np.arctan(labels))
-            y1 = R3 * np.sin(np.arctan(labels))
+            ticks = self.ticks_locator()
+            angles = np.array([self._t2axis_angle(val * 1e6) for val in ticks])
+            x = 1.02 * self.radius * np.cos(np.deg2rad(angles))
+            y = 1.02 * self.radius * np.sin(np.deg2rad(angles)) + 0.5
 
-            for idx, val in enumerate(za):
-                self.ax.text(x1[idx], y1[idx], str(val)+ "Ma") 
+            for idx, val in enumerate(ticks):
+                self.ax.text(x[idx], y[idx], str(val)+ "Ma", transform=self.ax.transAxes) 
 
+        def ticks(self):
+
+            ticks = self.ticks_locator()
+            angles = np.array([self._t2axis_angle(val * 1e6) for val in ticks])
+            starts = np.ndarray((len(angles), 2))
+            ends = np.ndarray((len(angles), 2))
+            starts[:,0] = self.radius * np.cos(np.deg2rad(angles))
+            starts[:,1] = self.radius * np.sin(np.deg2rad(angles)) + 0.5
+            ends[:,0] = 1.01 * self.radius * np.cos(np.deg2rad(angles))
+            ends[:,1] = 1.01 * self.radius * np.sin(np.deg2rad(angles)) + 0.5
+
+            segments = np.stack((starts, ends), axis=1)
+            lc = mc.LineCollection(segments, colors='k', linewidths=1, transform=self.ax.transAxes)
+            self.ax.add_collection(lc)
+    
+    
+        def add_values_indicators(self):
+            coords = np.ndarray((self.ax.x.size, 2))
+            coords[:,0] = self.ax.x
+            coords[:,1] = self.ax.y
+            axis_to_data = self.ax.transAxes + self.ax.transData.inverted()
+            data_to_axis = axis_to_data.inverted()
+            coords = data_to_axis.transform(coords)
+            angles = np.arctan((coords[:,1] - 0.5) / coords[:,0])
+            starts = np.ndarray((len(angles), 2))
+            ends = np.ndarray((len(angles), 2))
+
+            starts[:,0] = (self.radius - 0.02) * np.cos(angles)
+            starts[:,1] = (self.radius - 0.02) * np.sin(angles) + 0.5
+            ends[:,0] = (self.radius - 0.01) * np.cos(angles)
+            ends[:,1] = (self.radius - 0.01) * np.sin(angles) + 0.5
+
+            segments = np.stack((starts, ends), axis=1)
+            lc = mc.LineCollection(segments, colors='k', linewidths=2, transform=self.ax.transAxes)
+            self.ax.add_collection(lc) 
+
+    
     def radialplot(self, Ns, Ni, zeta, rhod, 
                    Dpars=None, marker="o", 
-                   transform="Logarithmic"):
+                   transform="logarithmic"):
        
         self.Ns = np.array(Ns)
         self.Ni = np.array(Ni)
@@ -134,7 +162,7 @@ class Radialplot(Axes):
         
         self.zaxis = Radialplot.ZAxis(self)
         self.zaxis._add_radial_axis()
-        self._add_values_indicators()
+        #self._add_values_indicators()
 
     def set_xticks(self, ticks=None):
         if ticks:
@@ -156,10 +184,10 @@ class Radialplot(Axes):
     @property
     def z(self):
         """ Return transformed z-values"""
-        if self.transform == "Linear":
+        if self.transform == "linear":
             return  1.0 / LAMBDA * np.log(1.0 + G * self.zeta * LAMBDA * self.rhod * (self.Ns / self.Ni))
 
-        if self.transform == "Logarithmic":
+        if self.transform == "logarithmic":
             return np.log(G * self.zeta * LAMBDA * self.rhod * (self.Ns / self.Ni))
            
         if self.transform == "arcsine":
@@ -174,15 +202,27 @@ class Radialplot(Axes):
     @property
     def max_x(self):
         return np.max(self.x)
+    
+    @property
+    def min_x(self):
+        return np.min(self.x)
+    
+    @property
+    def max_y(self):
+        return np.max(self.y)
+    
+    @property
+    def min_y(self):
+        return np.min(self.y)
         
     @property
     def sez(self):
         """Return standard errors"""
         
-        if self.transform == "Linear":
+        if self.transform == "linear":
             return self.z * np.sqrt( 1.0 / self.Ns + 1.0 / self.Ni)
 
-        if self.transform == "Logarithmic":
+        if self.transform == "logarithmic":
             return np.sqrt(1.0 / self.Ns + 1.0 / self.Ni)
 
         if self.transform == "arcsine":
@@ -192,10 +232,10 @@ class Radialplot(Axes):
     def z0(self):
         """ Return central age"""
         
-        if self.transform == "Linear":
+        if self.transform == "linear":
             return np.sum(self.z / self.sez**2) / np.sum(1 / self.sez**2)
 
-        if self.transform == "Logarithmic":
+        if self.transform == "logarithmic":
             totalNs = np.sum(self.Ns)
             totalNi = np.sum(self.Ni)
             return np.log(G * self.zeta * LAMBDA * self.rhod * (totalNs / totalNi))
@@ -205,10 +245,10 @@ class Radialplot(Axes):
     
     def _z2t(self, z):
         
-        if self.transform == "Linear":
+        if self.transform == "linear":
             t = z
             return t * 1e-6
-        elif self.transform == "Logarithmic":
+        elif self.transform == "logarithmic":
             NsNi = np.exp(z) / (self.zeta * G * LAMBDA * self.rhod)
         elif self.transform == "arcsine":
             NsNi = np.sin(z)**2 / (1.0 - np.sin(z)**2)
@@ -218,9 +258,9 @@ class Radialplot(Axes):
     
     def _t2z(self, t):
         
-        if self.transform == "Linear":
+        if self.transform == "linear":
             return t
-        elif self.transform == "Logarithmic":
+        elif self.transform == "logarithmic":
             return np.log(np.exp(LAMBDA * t) - 1)
         elif self.transform == "arcsine":
             return np.arcsin(
@@ -229,39 +269,30 @@ class Radialplot(Axes):
                         )
                     )
 
-    def _xy2zs(self, x, y):
-        return 1.0 / x, self.z0 + self.z * y
-
     def _rz2xy(self, r, z):
         # Calculate the coordinates of a point given by a radial distance
         # and a z-value (i.e. a slope)
-        slope = z - self.z0
+        slope = (z - self.z0)
         x = 1 / np.sqrt(1 / r**2 + slope**2 / r**2)
         y = slope * x
         return x, y
     
-    def _add_values_indicators(self):
-        R1 = (1.2 - 0.02) * self.max_x
-        R2 = (1.2 - 0.01) * self.max_x
-        ratio = np.arctan(self.y / self.x)
-        x1 = R1 * np.cos(ratio)
-        y1 = R1 * np.sin(ratio)
-        x2 = R2 * np.cos(ratio)
-        y2 = R2 * np.sin(ratio)
-
-        starts = list(zip(x1, y1))
-        ends = list(zip(x2, y2))
-        segments = zip(starts, ends)
-
-        lc = mc.LineCollection(segments, colors='k', linewidths=2)
-        self.add_collection(lc) 
         
             
 register_projection(Radialplot)
 
 
-def radialplot(Ns, Ni, zeta, rhod, Dpars=None, marker="o", transform="Logarithmic"):
+def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
+               Dpars=None, marker="o", transform="logarithmic"):
     fig = plt.figure(figsize=(6,6))
+    if file:
+        from .utilities import read_radialplotter_file
+        data = read_radialplotter_file(file)
+        Ns = data["Ns"]
+        Ni = data["Ni"]
+        zeta = data["zeta"]
+        rhod = data["rhod"]
+
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], projection="radialplot")
-    ax.radialplot(Ns, Ni, zeta, rhod, Dpars, transform=transform)
+    ax.radialplot(Ns, Ni, zeta, rhod, Dpars, transform=transform, marker=marker)
     return ax
