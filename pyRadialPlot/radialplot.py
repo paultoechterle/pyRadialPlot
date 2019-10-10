@@ -22,8 +22,8 @@ class ZAxis(object):
     def _add_radial_axis(self):
         # Get min and max angle
 
-        theta1 = self._t2axis_angle(self.zlim[0])
-        theta2 = self._t2axis_angle(self.zlim[1])
+        theta1 = self.ax._t2axis_angle(self.zlim[0])
+        theta2 = self.ax._t2axis_angle(self.zlim[1])
 
         # The circle is always centered around 0.
         # Width and height are equals (circle)
@@ -41,15 +41,8 @@ class ZAxis(object):
         # Add ticks
         self.ticks()
         self.labels()
+        self.set_zlabel("Estimates a.u")
         self.add_values_indicators()
-   
-    def _t2axis_angle(self, t):
-        axis_to_data = self.ax.transAxes + self.ax.transData.inverted()
-        data_to_axis = axis_to_data.inverted()
-        x, y = self.ax._rz2xy(1.0, self.ax._t2z(t))
-        x, y = data_to_axis.transform((x, y))
-        y -= 0.5
-        return np.rad2deg(np.arctan(y / x))
 
     def _get_radial_ticks_z(self):
         # Let's build the ticks of the Age axis
@@ -65,10 +58,16 @@ class ZAxis(object):
             ticks = loc.tick_values(start, end)
         return ticks
 
+    def set_zlabel(self, label):
+        self.ax.text(1.05, 0.5, label, rotation=-90,
+                horizontalalignment="center", verticalalignment="center",
+                transform=self.ax.transAxes)
+        return
+
     def labels(self):
         # text label
         ticks = self.ticks_locator()
-        angles = np.array([self._t2axis_angle(val) for val in ticks])
+        angles = np.array([self.ax._t2axis_angle(val) for val in ticks])
         x = 1.02 * self.radius * np.cos(np.deg2rad(angles))
         y = 1.02 * self.radius * np.sin(np.deg2rad(angles)) + 0.5
 
@@ -78,7 +77,7 @@ class ZAxis(object):
     def ticks(self):
 
         ticks = self.ticks_locator()
-        angles = np.array([self._t2axis_angle(val) for val in ticks])
+        angles = np.array([self.ax._t2axis_angle(val) for val in ticks])
         starts = np.ndarray((len(angles), 2))
         ends = np.ndarray((len(angles), 2))
         starts[:,0] = self.radius * np.cos(np.deg2rad(angles))
@@ -162,7 +161,6 @@ class Radialplot(Axes):
         y = slope * x
         return x, y
 
-
     def radialplot(self, estimates, standard_errors, transform="linear", **kwargs):
         self._z = np.array(estimates)
         self._sez = np.array(standard_errors)
@@ -181,6 +179,8 @@ class Radialplot(Axes):
         self.spines["top"].set_visible(False)
         self.spines["right"].set_visible(False)
         im = self.scatter(self.x, self.y, **kwargs)
+        self._add_sigma_lines()
+        self._add_central_line()
         
         self.zaxis = ZAxis(self)
         self.zaxis._add_radial_axis()
@@ -210,11 +210,39 @@ class Radialplot(Axes):
     def _t2z(self, t):
         if self.transform == "linear":
             return t
+    
+    def _t2axis_angle(self, t):
+        axis_to_data = self.transAxes + self.transData.inverted()
+        data_to_axis = axis_to_data.inverted()
+        x, y = self._rz2xy(1.0, self._t2z(t))
+        x, y = data_to_axis.transform((x, y))
+        y -= 0.5
+        return np.rad2deg(np.arctan(y / x))
 
+    def plot_line(self, angle, origin=(0.,0.), **kwargs):
+        axis_to_data = self.transAxes + self.transData.inverted()
+        data_to_axis = axis_to_data.inverted()
+        x1, y1 = data_to_axis.transform(origin)
+        x2 = 0.89 * np.cos(np.deg2rad(angle))
+        y2 = 0.89 * np.sin(np.deg2rad(angle)) + y1
+        self.plot((x1, x2), (y1, y2), transform=self.transAxes, **kwargs)
+        return
+
+    def _add_sigma_lines(self):
+        self.plot_line(0., (0., 2.0), color="gray")
+        self.plot_line(0., (0., -2.0), color="gray")
+        return
+
+    def _add_central_line(self):
+        self.plot_line(0., (0., 0.), linestyle="--", color="gray")
 register_projection(Radialplot)
 
 def general_radial(file=None, estimates=None, standard_errors=None, transform="linear", **kwargs):
     fig = plt.figure(figsize=(6,6))
+    
+    if not "color" in kwargs.keys():
+        kwargs["color"] = "black"
+    
     if file:
         from .utilities import read_radialplotter_file
         data = read_radialplotter_file(file)

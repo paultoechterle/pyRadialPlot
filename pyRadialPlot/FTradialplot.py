@@ -17,8 +17,8 @@ class ZAxisFT(ZAxis):
     def _add_radial_axis(self):
         # Get min and max angle
 
-        theta1 = self._t2axis_angle(self.zlim[0] * 1e6)
-        theta2 = self._t2axis_angle(self.zlim[1] * 1e6)
+        theta1 = self.ax._t2axis_angle(self.zlim[0] * 1e6)
+        theta2 = self.ax._t2axis_angle(self.zlim[1] * 1e6)
 
         # The circle is always centered around 0.
         # Width and height are equals (circle)
@@ -36,6 +36,7 @@ class ZAxisFT(ZAxis):
         # Add ticks
         self.ticks()
         self.labels()
+        self.set_zlabel("Age Estimates (Myr)")
         self.add_values_indicators()
     
     def _get_radial_ticks_z(self):
@@ -47,17 +48,17 @@ class ZAxisFT(ZAxis):
     def labels(self):
         # text label
         ticks = self.ticks_locator()
-        angles = np.array([self._t2axis_angle(val * 1e6) for val in ticks])
+        angles = np.array([self.ax._t2axis_angle(val * 1e6) for val in ticks])
         x = 1.02 * self.radius * np.cos(np.deg2rad(angles))
         y = 1.02 * self.radius * np.sin(np.deg2rad(angles)) + 0.5
 
         for idx, val in enumerate(ticks):
-            self.ax.text(x[idx], y[idx], str(val)+ "Ma", transform=self.ax.transAxes) 
+            self.ax.text(x[idx], y[idx], str(val), transform=self.ax.transAxes)
 
     def ticks(self):
 
         ticks = self.ticks_locator()
-        angles = np.array([self._t2axis_angle(val * 1e6) for val in ticks])
+        angles = np.array([self.ax._t2axis_angle(val * 1e6) for val in ticks])
         starts = np.ndarray((len(angles), 2))
         ends = np.ndarray((len(angles), 2))
         starts[:,0] = self.radius * np.cos(np.deg2rad(angles))
@@ -122,7 +123,9 @@ class FTRadialplot(Radialplot):
         im=self.scatter(self.x, self.y, c=Dpars, **kwargs)
         if Dpars:
             self.figure.colorbar(im, ax=self, orientation="horizontal")
-        
+        self._add_sigma_lines()
+        self._add_central_line()
+
         self.zaxis = ZAxisFT(self)
         self.zaxis._add_radial_axis()
 
@@ -196,6 +199,7 @@ class FTRadialplot(Radialplot):
                         )
                     )
 
+
 register_projection(FTRadialplot)
 
 def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
@@ -232,6 +236,9 @@ def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
         matplotlib.Axes: 
             A Matplotlib Axes object.
     """
+    if not "color" in kwargs.keys():
+        kwargs["color"] = "black"
+
     fig = plt.figure(figsize=(6,6))
     if file:
         from .utilities import read_radialplotter_file
