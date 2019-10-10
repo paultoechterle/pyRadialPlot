@@ -56,8 +56,8 @@ def generic_parser(filename):
         standard_errors = []
         
         for line in file:
-            estimates.append(line[0])
-            standard_errors.append(line[1])
+            estimates.append(float(line[0]))
+            standard_errors.append(float(line[1]))
 
     return {"Estimates": estimates,
             "Standard Errors": standard_errors}
