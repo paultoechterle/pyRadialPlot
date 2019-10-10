@@ -7,7 +7,7 @@ A Python Package for Fission Track Radial Plots.
 Romain Beucher, The University of Melbourne and The Australian National University
 
 Learn more about Radial Plot here:
-(Wikipedia Article on Galbraith Plots)[]
+(Wikipedia Article on Galbraith Plots)[https://en.wikipedia.org/wiki/Galbraith_plot]
 
 ## Acknowledgments
 
