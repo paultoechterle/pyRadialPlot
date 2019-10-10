@@ -1,6 +1,6 @@
 # pyRadialPlot
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rbeucher/pyRadialplot/master?filepath=examples%2FRadialPlot.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/rbeucher/pyRadialplot/master)
 
 A Python Package for Fission Track Radial Plots.
 
