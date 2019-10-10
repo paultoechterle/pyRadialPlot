@@ -1,11 +1,11 @@
 
 import csv
 
-def read_radialplotter_file(filename):
+def fission_track_parser(filename):
     """ Parser P. Vermeesh RadialPlotter csv file
 
         returns: Ns, Ni, dpars as python lists"""
-
+    
     with open(filename, "r") as f:
         file = csv.reader(f)
         name = next(file)
@@ -32,3 +32,32 @@ def read_radialplotter_file(filename):
             "zeta_err": zeta_err,
             "rhod": rhod,
             "rhod_err": rhod_err}
+
+def read_radialplotter_file(filename):
+    """ Parser P. Vermeesh RadialPlotter csv file"""
+
+    with open(filename, "r") as f:
+        file = csv.reader(f)
+        name = next(file)
+
+    if name[1] == "F":
+        return fission_track_parser(filename)
+    else:
+        return generic_parser(filename)
+
+def generic_parser(filename):
+    """ Parser P. Vermeesh RadialPlotter csv file"""
+
+    with open(filename, "r") as f:
+        file = csv.reader(f)
+        name = next(file)
+        
+        estimates = []
+        standard_errors = []
+        
+        for line in file:
+            estimates.append(line[0])
+            standard_errors.append(line[1])
+
+    return {"Estimates": estimates,
+            "Standard Errors": standard_errors}
