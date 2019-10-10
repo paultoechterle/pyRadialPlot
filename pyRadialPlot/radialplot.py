@@ -14,16 +14,6 @@ G = 0.5
 
 class Radialplot(Axes):
 
-    """
-    A RadialPlot or Galbraith Plot
-    """
-
-    name = "radialplot"
-
-    LAMBDA = 1.55125e-4
-    ZETA = 350
-    RHOD = 1.304
-
     class ZAxis(object):
 
         def __init__(self, ax):
@@ -127,10 +117,24 @@ class Radialplot(Axes):
             lc = mc.LineCollection(segments, colors='k', linewidths=2, transform=self.ax.transAxes)
             self.ax.add_collection(lc) 
 
+
+class FTRadialplot(Radialplot):
+
+    """A RadiaPlot for fission track counts
     
+    Returns:
+        FTRadialPlot: Radialplot
+    """
+
+    name = "fission_track_radialplot"
+
+    LAMBDA = 1.55125e-4
+    ZETA = 350
+    RHOD = 1.304
+
     def radialplot(self, Ns, Ni, zeta, rhod, 
-                   Dpars=None, marker="o", 
-                   transform="logarithmic"):
+                   Dpars=None, transform="logarithmic",
+                   **kwargs):
        
         self.Ns = np.array(Ns)
         self.Ni = np.array(Ni)
@@ -156,13 +160,17 @@ class Radialplot(Axes):
         self.spines["top"].set_visible(False)
         self.spines["right"].set_visible(False)
             
-        im=self.scatter(self.x, self.y, c=Dpars, marker=marker)
+        im=self.scatter(self.x, self.y, c=Dpars, **kwargs)
         if Dpars:
             self.figure.colorbar(im, ax=self, orientation="horizontal")
         
         self.zaxis = Radialplot.ZAxis(self)
         self.zaxis._add_radial_axis()
-        #self._add_values_indicators()
+
+        # Apply some default labels:
+
+        self.set_xlabel("precision x")
+        self.set_ylabel("standardised estimate y")
 
     def set_xticks(self, ticks=None):
         if ticks:
@@ -276,14 +284,44 @@ class Radialplot(Axes):
         x = 1 / np.sqrt(1 / r**2 + slope**2 / r**2)
         y = slope * x
         return x, y
-    
-        
             
-register_projection(Radialplot)
+register_projection(FTRadialplot)
 
 
 def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
-               Dpars=None, marker="o", transform="logarithmic"):
+               Dpars=None, transform="logarithmic", **kwargs):
+    """Plot Fission Track counts using a RadialPlot (Galbraith Plot)
+    
+    Args:
+        Ns (list or numpy array, optional): 
+            Spontaneous counts. 
+            Defaults to None.
+        Ni (list or numpy array, optional): 
+            Induced counts. 
+            Defaults to None.
+        zeta (float, optional): 
+            Zeta calibration parameter.
+            Defaults to None.
+        rhod (float, optional): 
+            Rhod calibration parameter.
+            Defaults to None.
+        file (string, optional): 
+            Data File, for now pyRadialPlot only accepts
+            file format similar to RadialPlotter.
+            Defaults to None.
+        Dpars (list or numpy array or float, optional): 
+            Dpars values associated with the grain counts.
+            Defaults to None.
+        transform (str, optional): 
+            Transformation used.
+            Options are "linear", "logarithmic", "arcsine".
+            Defaults to "logarithmic".
+        kwargs: Matplotlib additional parameters.
+    
+    Returns:
+        matplotlib.Axes: 
+            A Matplotlib Axes object.
+    """
     fig = plt.figure(figsize=(6,6))
     if file:
         from .utilities import read_radialplotter_file
@@ -293,6 +331,6 @@ def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
         zeta = data["zeta"]
         rhod = data["rhod"]
 
-    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], projection="radialplot")
-    ax.radialplot(Ns, Ni, zeta, rhod, Dpars, transform=transform, marker=marker)
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], projection="fission_track_radialplot")
+    ax.radialplot(Ns, Ni, zeta, rhod, Dpars, transform=transform, **kwargs)
     return ax
