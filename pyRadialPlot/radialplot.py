@@ -117,6 +117,53 @@ class Radialplot(Axes):
             lc = mc.LineCollection(segments, colors='k', linewidths=2, transform=self.ax.transAxes)
             self.ax.add_collection(lc) 
 
+    @property
+    def x(self):
+        return  1.0 / self.sez
+    
+    @property
+    def y(self):
+        return (self.z - self.z0) / self.sez
+
+    @property
+    def max_x(self):
+        return np.max(self.x)
+    
+    @property
+    def min_x(self):
+        return np.min(self.x)
+    
+    @property
+    def max_y(self):
+        return np.max(self.y)
+    
+    @property
+    def min_y(self):
+        return np.min(self.y)
+    
+    def set_xlim(self, xlim=None):
+        if xlim:
+            super(Radialplot, self).set_xlim(xlim[0], 1.25 * xlim[-1])
+        else:   
+            super(Radialplot, self).set_xlim(0, 1.25 * self.max_x)
+    
+    def set_xticks(self, ticks=None):
+        if ticks:
+            super(Radialplot, self).set_xticks(ticks)
+        else:
+            loc = LinearLocator(5)
+            ticks = loc.tick_values(0., self.max_x)
+            super(Radialplot, self).set_xticks(ticks)
+        self.spines["bottom"].set_bounds(ticks[0], ticks[-1])
+    
+    def _rz2xy(self, r, z):
+        # Calculate the coordinates of a point given by a radial distance
+        # and a z-value (i.e. a slope)
+        slope = (z - self.z0)
+        x = 1 / np.sqrt(1 / r**2 + slope**2 / r**2)
+        y = slope * x
+        return x, y
+
 
 class FTRadialplot(Radialplot):
 
@@ -172,22 +219,6 @@ class FTRadialplot(Radialplot):
         self.set_xlabel("precision x")
         self.set_ylabel("standardised estimate y")
 
-    def set_xticks(self, ticks=None):
-        if ticks:
-            super(Radialplot, self).set_xticks(ticks)
-        else:
-            loc = LinearLocator(5)
-            ticks = loc.tick_values(0., self.max_x)
-            super(Radialplot, self).set_xticks(ticks)
-        self.spines["bottom"].set_bounds(ticks[0], ticks[-1])
-    
-    @property
-    def x(self):
-        return  1.0 / self.sez
-    
-    @property
-    def y(self):
-        return (self.z - self.z0) / self.sez
     
     @property
     def z(self):
@@ -200,28 +231,6 @@ class FTRadialplot(Radialplot):
            
         if self.transform == "arcsine":
             return np.arcsin(np.sqrt((self.Ns + 3.0/8.0) / (self.Ns + self.Ni + 3.0 / 4.0)))
-
-    def set_xlim(self, xlim=None):
-        if xlim:
-            super(Radialplot, self).set_xlim(xlim[0], 1.25 * xlim[-1])
-        else:   
-            super(Radialplot, self).set_xlim(0, 1.25 * self.max_x)
-
-    @property
-    def max_x(self):
-        return np.max(self.x)
-    
-    @property
-    def min_x(self):
-        return np.min(self.x)
-    
-    @property
-    def max_y(self):
-        return np.max(self.y)
-    
-    @property
-    def min_y(self):
-        return np.min(self.y)
         
     @property
     def sez(self):
@@ -277,13 +286,6 @@ class FTRadialplot(Radialplot):
                         )
                     )
 
-    def _rz2xy(self, r, z):
-        # Calculate the coordinates of a point given by a radial distance
-        # and a z-value (i.e. a slope)
-        slope = (z - self.z0)
-        x = 1 / np.sqrt(1 / r**2 + slope**2 / r**2)
-        y = slope * x
-        return x, y
             
 register_projection(FTRadialplot)
 
