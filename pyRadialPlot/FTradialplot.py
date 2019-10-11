@@ -124,6 +124,7 @@ class FTRadialplot(Radialplot):
         if Dpars:
             self.figure.colorbar(im, ax=self, orientation="horizontal")
         self._add_sigma_lines()
+        self._add_shaded_area()
         self._add_central_line()
 
         self.zaxis = ZAxisFT(self)

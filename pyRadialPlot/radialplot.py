@@ -7,6 +7,7 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LinearLocator
 from matplotlib.ticker import MaxNLocator
+from matplotlib.patches import Polygon
 
 class ZAxis(object):
 
@@ -180,6 +181,7 @@ class Radialplot(Axes):
         self.spines["right"].set_visible(False)
         im = self.scatter(self.x, self.y, **kwargs)
         self._add_sigma_lines()
+        self._add_shaded_area()
         self._add_central_line()
         
         self.zaxis = ZAxis(self)
@@ -229,12 +231,24 @@ class Radialplot(Axes):
         return
 
     def _add_sigma_lines(self):
-        self.plot_line(0., (0., 2.0), color="gray")
-        self.plot_line(0., (0., -2.0), color="gray")
+        self.plot_line(0., (0., 2.0), color="k", zorder=1)
+        self.plot_line(0., (0., -2.0), color="k", zorder=1)
         return
 
+    def _add_shaded_area(self):
+        axis_to_data = self.transAxes + self.transData.inverted()
+        x, y = axis_to_data.transform((0.89, 0.))
+        coords = np.ndarray((4,2))
+        coords[0,:] = np.array([0., 2.0])
+        coords[1,:] = np.array([x, 2.0])
+        coords[2,:] = np.array([x, -2.0])
+        coords[3,:] = np.array([0., -2.0])
+        p = Polygon(coords, closed=True, color="silver", zorder=0)
+        self.add_patch(p)
+
     def _add_central_line(self):
-        self.plot_line(0., (0., 0.), linestyle="--", color="gray")
+        self.plot_line(0., (0., 0.), linestyle="--", color="k", zorder=1)
+
 register_projection(Radialplot)
 
 def general_radial(file=None, estimates=None, standard_errors=None, transform="linear", **kwargs):
