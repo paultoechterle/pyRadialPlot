@@ -6,6 +6,10 @@ A Python Package for Fission Track Radial Plots.
 
 Romain Beucher, The University of Melbourne and The Australian National University
 
+Inline-style: 
+![RadialPlot](https://github.com/rbeucher/pyRadialPlot/blob/master/radialplot.png)
+
+
 ## What is a Radial plot?
 
 The radial plot is a graphical method for displaying and comparing observations that have different precision. Invented by Rex Galbraith in 1988 it is commonly used in geochronology but as also a wide range of applications in business analytics or medical research. The observations are standardised and plotted against precision, with the precision defined as the reciprocal of the standard error. The original observations are given by slopes of lines through the origin and can be read using a circular scale. Radial plots provide a visual representation that can help to assess whether the estimates agree with a common value. They can also be used to identify outliers or groups of estimates differing in a systematic way because of some underlying factor or mixture of populations.    
