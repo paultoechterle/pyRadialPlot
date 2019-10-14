@@ -219,10 +219,18 @@ class Radialplot(Axes):
     def _z2t(self, z):
         if self.transform == "linear":
             return z
+        elif self.transform == "logarithmic":
+            return np.exp(z)
+        elif self.transform == "sqrt":
+            return z**2
 
     def _t2z(self, t):
         if self.transform == "linear":
             return t
+        elif self.transform == "logarithmic":
+            return np.log(t)
+        elif self.transform == "sqrt":
+            return np.sqrt(t)
     
     def _t2axis_angle(self, t):
         axis_to_data = self.transAxes + self.transData.inverted()
