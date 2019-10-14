@@ -188,18 +188,29 @@ class Radialplot(Axes):
         self.zaxis._add_radial_axis()
         
         # Apply some default labels:
-        self.set_xlabel("precision x")
-        self.set_ylabel("standardised estimate y")
+        self.set_ylabel("Standardised estimate y")
 
     @property
     def z(self):
         if self.transform == "linear":
             return self._z
+        if self.transform == "logarithmic":
+            return np.log(self._z)
+        if self.transform =="sqrt":
+            return np.sqrt(self._z)
+        else:
+            raise NotImplementedError("""This transformation is not implemented""")
 
     @property
     def sez(self):
         if self.transform == "linear":
             return self._sez
+        elif self.transform == "logarithmic":
+            return self._sez / self._z
+        elif self.transform == "sqrt":
+            return 0.5 * self._sez / self.z
+        else:
+            raise NotImplementedError("""This transformation is not implemented""")
 
     @property
     def z0(self):
