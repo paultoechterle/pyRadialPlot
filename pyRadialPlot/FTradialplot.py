@@ -114,8 +114,8 @@ class FTRadialplot(Radialplot):
         self.spines["left"].set_bounds(-2, 2)
         self.yaxis.set_ticks_position('left')
        
-        self.set_xticks()
         self.set_xlim()
+        self.set_xticks()
         
         self.spines["top"].set_visible(False)
         self.spines["right"].set_visible(False)
@@ -131,9 +131,69 @@ class FTRadialplot(Radialplot):
         self.zaxis._add_radial_axis()
 
         # Apply some default labels:
-        self.set_xlabel("precision x")
-        self.set_ylabel("standardised estimate y")
-    
+        self.set_ylabel("Standardised estimate y")
+        #self._second_axis()
+
+    def _second_axis(self):
+        
+        def tick_function(x):
+            with np.errstate(divide='ignore'):
+                v = 1./ x
+            return ["{0}%".format(int(val*100)) if val != np.inf else "" for val in v]
+
+        twin_axis = self.twiny()
+        twin_axis.set_xlim(self.get_xlim())
+        
+        loc = MaxNLocator(5)
+        ticks = loc.tick_values(0, self.max_x)
+        twin_axis.spines["bottom"].set_bounds(ticks[0], ticks[-1])
+
+        twin_axis.xaxis.set_ticks_position("bottom")
+        twin_axis.xaxis.set_label_position("bottom")
+        twin_axis.tick_params(axis="x", direction="in", pad=-15)
+        twin_axis.spines["bottom"].set_position(("axes", 0.))
+        twin_axis.set_frame_on(True)
+        twin_axis.patch.set_visible(False)
+        for key, sp in twin_axis.spines.items():
+            sp.set_visible(False)
+        twin_axis.spines["bottom"].set_visible(True)
+
+        twin_axis.set_xticks(ticks)
+        twin_axis.set_xticklabels(tick_function(ticks))
+        twin_axis.set_xlabel(r'$\sigma / t$', labelpad=-30)
+        return
+
+    def set_xticks(self, ticks=None):
+        if ticks:
+            super(Radialplot, self).set_xticks(ticks)
+        else:
+            if self.transform == "linear":
+                loc = MaxNLocator(5)
+                ticks = loc.tick_values(0., self.max_x)
+                ticks2 = loc.tick_values(min(self.sez), max(self.sez))
+                ticks2 = ticks2[::-1]
+                ticks2[-1] = min(self.sez)
+                super(Radialplot, self).set_xticks(1.0 / ticks2)
+                labels = [str(int(val*1e-6)) for val in ticks2]
+                self.xaxis.set_ticklabels(labels)
+                self.spines["bottom"].set_bounds(0., 1. / ticks2[-1])
+                self.set_xlabel(r'$\sigma$ (Myr)')
+            elif self.transform == "logarithmic":
+                loc = MaxNLocator(5)
+                ticks = loc.tick_values(0., self.max_x)
+                super(Radialplot, self).set_xticks(ticks)
+                self.spines["bottom"].set_bounds(ticks[0], ticks[-1])
+                self.set_xlabel(r'$t / \sigma$')
+                self._second_axis()
+            elif self.transform == "arcsine":
+                loc = MaxNLocator(5)
+                ticks = loc.tick_values(0., self.max_x)
+                super(Radialplot, self).set_xticks(ticks)
+                labels = [str(int(val**2/4.0)) for val in ticks]
+                self.xaxis.set_ticklabels(labels)
+                self.spines["bottom"].set_bounds(ticks[0], ticks[-1])
+                self.set_xlabel("Ns + Ni")
+
     @property
     def z(self):
         """ Return transformed z-values"""

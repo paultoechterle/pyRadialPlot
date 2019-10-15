@@ -6,7 +6,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LinearLocator
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, AutoLocator
 from matplotlib.patches import Polygon
 
 class ZAxis(object):
@@ -90,7 +90,6 @@ class ZAxis(object):
         lc = mc.LineCollection(segments, colors='k', linewidths=1, transform=self.ax.transAxes)
         self.ax.add_collection(lc)
 
-
     def add_values_indicators(self):
         coords = np.ndarray((self.ax.x.size, 2))
         coords[:,0] = self.ax.x
@@ -110,6 +109,7 @@ class ZAxis(object):
         segments = np.stack((starts, ends), axis=1)
         lc = mc.LineCollection(segments, colors='k', linewidths=2, transform=self.ax.transAxes)
         self.ax.add_collection(lc) 
+
 
 class Radialplot(Axes):
     
@@ -139,20 +139,32 @@ class Radialplot(Axes):
     def min_y(self):
         return np.min(self.y)
     
-    def set_xlim(self, xlim=None):
-        if xlim:
-            super(Radialplot, self).set_xlim(xlim[0], 1.25 * xlim[-1])
+    def set_xlim(self, xlim=None, **kwargs):
+        if xlim is not None:
+            super(Radialplot, self).set_xlim(xlim[0], 1.25 * xlim[-1], **kwargs)
         else:   
-            super(Radialplot, self).set_xlim(0, 1.25 * self.max_x)
+            super(Radialplot, self).set_xlim(0, 1.25 * self.max_x, **kwargs)
     
     def set_xticks(self, ticks=None):
         if ticks:
             super(Radialplot, self).set_xticks(ticks)
         else:
-            loc = LinearLocator(5)
-            ticks = loc.tick_values(0., self.max_x)
-            super(Radialplot, self).set_xticks(ticks)
-        self.spines["bottom"].set_bounds(ticks[0], ticks[-1])
+            if self.transform == "linear":
+                loc = AutoLocator()
+                ticks = loc.tick_values(0., self.max_x)
+                ticks2 = loc.tick_values(min(self.sez), max(self.sez))
+                ticks2 = ticks2[::-1]
+                ticks2[-1] = min(self.sez)
+                super(Radialplot, self).set_xticks(1.0 / ticks2)
+                labels = ["{0:5.1}".format(val) for val in ticks2]
+                self.xaxis.set_ticklabels(labels)
+                self.spines["bottom"].set_bounds(0., 1. / ticks2[-1])
+                self.set_xlabel(r'$\sigma$')
+            else:
+                loc = MaxNLocator(5)
+                ticks = loc.tick_values(0., self.max_x)
+                super(Radialplot, self).set_xticks(ticks)
+                self.spines["bottom"].set_bounds(ticks[0], ticks[-1])
     
     def _rz2xy(self, r, z):
         # Calculate the coordinates of a point given by a radial distance
@@ -174,8 +186,8 @@ class Radialplot(Axes):
         self.spines["left"].set_bounds(-2, 2)
         self.yaxis.set_ticks_position('left')
        
-        self.set_xticks()
         self.set_xlim()
+        self.set_xticks()
         
         self.spines["top"].set_visible(False)
         self.spines["right"].set_visible(False)
@@ -271,8 +283,9 @@ class Radialplot(Axes):
 register_projection(Radialplot)
 
 def general_radial(file=None, estimates=None, standard_errors=None, transform="linear", **kwargs):
+
     fig = plt.figure(figsize=(6,6))
-    
+
     if not "color" in kwargs.keys():
         kwargs["color"] = "black"
     
