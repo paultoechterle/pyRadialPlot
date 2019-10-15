@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='pyRadialPlot',
-      version='0.3',
+      version='0.4',
       description='Radial Plot using python and matplotlib',
       url='http://github.com/rbeucher/pyRadialPlot',
       author='Romain Beucher',
