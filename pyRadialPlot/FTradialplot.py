@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import LinearLocator
 from matplotlib.ticker import MaxNLocator
 from .radialplot import ZAxis, Radialplot
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 LAMBDA = 1.55125e-10
 G = 0.5
@@ -120,9 +122,15 @@ class FTRadialplot(Radialplot):
         self.spines["top"].set_visible(False)
         self.spines["right"].set_visible(False)
             
-        im=self.scatter(self.x, self.y, c=Dpars, **kwargs)
+        im=self.scatter(self.x, self.y, c=Dpars, cmap="YlOrRd", **kwargs)
         if Dpars:
-            self.figure.colorbar(im, ax=self, orientation="horizontal")
+            divider = make_axes_locatable(self)
+            if self.transform == "logarithmic":
+                divider = make_axes_locatable(self.taxis)
+            cax = divider.new_vertical(size="5%", pad=0.8, pack_start=True)
+            self.figure.add_axes(cax)
+            self.figure.colorbar(im, cax=cax, orientation="horizontal", label=r'Dpars ($\mu$m)')
+
         self._add_sigma_lines()
         self._add_shaded_area()
         self._add_central_line()
@@ -132,7 +140,6 @@ class FTRadialplot(Radialplot):
 
         # Apply some default labels:
         self.set_ylabel("Standardised estimate y")
-        #self._second_axis()
 
     def _second_axis(self):
         
@@ -161,6 +168,8 @@ class FTRadialplot(Radialplot):
         twin_axis.set_xticks(ticks)
         twin_axis.set_xticklabels(tick_function(ticks))
         twin_axis.set_xlabel(r'$\sigma / t$', labelpad=-30)
+        
+        self.taxis = twin_axis
         return
 
     def set_xticks(self, ticks=None):
@@ -260,7 +269,6 @@ class FTRadialplot(Radialplot):
                         )
                     )
 
-
 register_projection(FTRadialplot)
 
 def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
@@ -297,8 +305,6 @@ def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
         matplotlib.Axes: 
             A Matplotlib Axes object.
     """
-    if not "color" in kwargs.keys():
-        kwargs["color"] = "black"
 
     fig = plt.figure(figsize=(6,6))
     if file:
@@ -308,6 +314,10 @@ def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
         Ni = data["Ni"]
         zeta = data["zeta"]
         rhod = data["rhod"]
+        Dpars = data["dpars"]
+    
+    if not Dpars and not "color" in kwargs.keys():
+        kwargs["color"] = "black"
 
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], projection="fission_track_radialplot")
     ax.radialplot(Ns, Ni, zeta, rhod, Dpars, transform=transform, **kwargs)
