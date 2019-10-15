@@ -314,7 +314,8 @@ def radialplot(Ns=None, Ni=None, zeta=None, rhod=None, file=None,
         Ni = data["Ni"]
         zeta = data["zeta"]
         rhod = data["rhod"]
-        Dpars = data["dpars"]
+        if Dpars:
+            Dpars = data["dpars"]
     
     if not Dpars and not "color" in kwargs.keys():
         kwargs["color"] = "black"
