@@ -139,11 +139,11 @@ class Radialplot(Axes):
     def min_y(self):
         return np.min(self.y)
     
-    def set_xlim(self, xlim=None, **kwargs):
-        if xlim is not None:
-            super(Radialplot, self).set_xlim(xlim[0], 1.25 * xlim[-1], **kwargs)
+    def set_xlim(self, left=None, right=None, **kwargs):
+        if left is not None and right is not None:
+            super(Radialplot, self).set_xlim(left=left, right=1.25 * right, **kwargs)
         else:   
-            super(Radialplot, self).set_xlim(0, 1.25 * self.max_x, **kwargs)
+            super(Radialplot, self).set_xlim(left=0, right=1.25 * self.max_x, **kwargs)
     
     def set_xticks(self, ticks=None):
         if ticks:
